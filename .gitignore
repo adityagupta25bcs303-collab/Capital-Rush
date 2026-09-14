@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+# (client/dist will be generated on cloud build, but we can also exclude or include it)
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Executables
+cloudflared.exe
+
+# OS
+.DS_Store
+Thumbs.db
