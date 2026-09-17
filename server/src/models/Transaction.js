@@ -20,6 +20,7 @@ const transactionSchema = new mongoose.Schema({
       'ADMIN_DEBIT',
       'ROUND1_INVESTMENT',
       'ROUND1_STOCK_UPDATE',
+      'ROUND2_TASK_ENTRY',
       'ROUND2_REWARD',
       'ROUND2_PENALTY',
       'ROUND3_TRANSFER_OUT',

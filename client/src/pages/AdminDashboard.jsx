@@ -19,6 +19,7 @@ import {
 import QRScannerModal from '../components/QRScannerModal';
 import Round2QuickMoneyModal from '../components/Round2QuickMoneyModal';
 import AdminStockModal from '../components/AdminStockModal';
+import AdminTaskScoringModal from '../components/AdminTaskScoringModal';
 import QRDisplayModal from '../components/QRDisplayModal';
 import {
   ShieldCheck,
@@ -39,7 +40,9 @@ import {
   Radio,
   Trash2,
   Power,
-  RotateCcw
+  RotateCcw,
+  Flame,
+  Award
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -67,6 +70,9 @@ export default function AdminDashboard() {
   const [quickMoneyTeamId, setQuickMoneyTeamId] = useState(null);
   const [stockModalTeam, setStockModalTeam] = useState(null);
   const [qrDisplayTeam, setQrDisplayTeam] = useState(null);
+  const [taskScoringOpen, setTaskScoringOpen] = useState(false);
+  const [selectedTaskKey, setSelectedTaskKey] = useState('WHO_AM_I');
+  const [taskScoringTeamId, setTaskScoringTeamId] = useState('');
 
   // Forms
   const [newTeamName, setNewTeamName] = useState('');
@@ -340,6 +346,7 @@ export default function AdminDashboard() {
         <div className="flex overflow-x-auto gap-2 mt-8 pt-6 border-t border-slate-800 text-xs">
           {[
             { id: 'overview', label: 'Dashboard Overview', icon: Building2 },
+            { id: 'tasks', label: 'Round 2 Arena Tasks', icon: Flame },
             { id: 'teams', label: `Teams (${teams.length})`, icon: Users },
             { id: 'participants', label: `Participants (${participants.length})`, icon: ShieldCheck },
             { id: 'settings', label: 'Game Settings & Rounds', icon: Settings },
@@ -490,6 +497,121 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: ROUND 2 ARENA TASKS */}
+      {/* ========================================================================= */}
+      {activeTab === 'tasks' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-2">
+                  <Flame className="w-3.5 h-3.5" /> ARENA TASK CONTROLLER
+                </div>
+                <h3 className="font-display font-black text-2xl text-white">
+                  Round 2 Task Challenges & Scoring
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Manage the 4 official tournament tasks, deduct entry fees, and record risk-adjusted payouts.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setTaskScoringTeamId('');
+                    setSelectedTaskKey('WHO_AM_I');
+                    setTaskScoringOpen(true);
+                  }}
+                  className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-display font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-amber-500/25 transition active:scale-95 flex items-center gap-2"
+                >
+                  <Award className="w-4 h-4" />
+                  <span>SCORE ANY TASK</span>
+                </button>
+              </div>
+            </div>
+
+            {/* The 4 Official Task Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {[
+                { key: 'WHO_AM_I', name: 'Who Am I', diff: 'Medium', risk: 'Medium', fee: 300, mult: 2.0, color: 'text-amber-400', border: 'border-amber-500/30' },
+                { key: 'BOUNCE_THE_BALL', name: 'Bounce The Ball', diff: 'Easy', risk: 'Easy', fee: 200, mult: 1.5, color: 'text-emerald-400', border: 'border-emerald-500/30' },
+                { key: 'EAT_THE_COOKIES', name: 'Eat The Cookies', diff: 'Moderately Hard', risk: 'Medium-High', fee: 400, mult: 2.5, color: 'text-purple-400', border: 'border-purple-500/30' },
+                { key: 'RUN_WITH_THE_PEN', name: 'Run With The Pen', diff: 'Hard', risk: 'Hard', fee: 600, mult: 3.5, color: 'text-rose-400', border: 'border-rose-500/30' }
+              ].map((task) => (
+                <div key={task.key} className={`bg-slate-950 p-4 rounded-2xl border ${task.border} flex flex-col justify-between`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`font-display font-black text-sm uppercase ${task.color}`}>
+                        {task.name}
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-bold">
+                        ₹{task.fee} Fee
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-300 space-y-1 mb-4">
+                      <div>Difficulty: <strong className="text-white">{task.diff}</strong></div>
+                      <div>Risk Level: <strong className="text-white">{task.risk}</strong></div>
+                      <div>Default Payout: <strong className="text-emerald-400">{task.mult}x (₹{Math.round(task.fee * task.mult)})</strong></div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedTaskKey(task.key);
+                      setTaskScoringTeamId('');
+                      setTaskScoringOpen(true);
+                    }}
+                    className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5"
+                  >
+                    <Award className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Score {task.name}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Team Task Scoring List */}
+            <div>
+              <h4 className="font-display font-bold text-base text-white mb-3 flex items-center justify-between">
+                <span>Select Team to Score</span>
+                <span className="text-xs font-mono text-slate-400">{teams.length} Teams</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {teams.map((t) => {
+                  const isEliminated = t.currentCapital < 1000 || t.status === 'DISQUALIFIED' || t.status === 'ELIMINATED';
+                  return (
+                    <div key={t.teamId} className={`bg-slate-950 p-3.5 rounded-2xl border ${isEliminated ? 'border-rose-900/60 bg-rose-950/15' : 'border-slate-800'} flex items-center justify-between gap-3`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-amber-400">{t.teamId}</span>
+                          <span className="font-bold text-white text-sm truncate">{t.name}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 font-mono mt-0.5">
+                          ₹{t.currentCapital.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setTaskScoringTeamId(t.teamId);
+                          setTaskScoringOpen(true);
+                        }}
+                        disabled={isEliminated}
+                        className="py-1.5 px-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-30 text-slate-950 font-bold text-xs rounded-lg transition shrink-0"
+                      >
+                        Score Task
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -1003,13 +1125,12 @@ export default function AdminDashboard() {
             {/* Active Round Selector */}
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
               <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Active Round
+                Active Round (2 Rounds Competition)
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {[
                   { r: 1, label: 'ROUND 1: INVESTMENT' },
-                  { r: 2, label: 'ROUND 2: PHYSICAL' },
-                  { r: 3, label: 'ROUND 3: NEGOTIATION' }
+                  { r: 2, label: 'ROUND 2: ARENA TASKS' }
                 ].map(({ r, label }) => (
                   <button
                     key={r}
@@ -1028,7 +1149,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Financial Parameters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
                   Default Starting Capital (₹)
@@ -1043,12 +1164,36 @@ export default function AdminDashboard() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Round 1 Minimum Cash Rule (₹)
+                  Min Per Asset Rule (₹)
                 </label>
                 <input
                   type="number"
-                  value={settings?.minimumCash ?? 2000}
-                  onChange={(e) => setSettings({ ...settings, minimumCash: parseInt(e.target.value) || 0 })}
+                  value={settings?.minimumAssetInvestment ?? 1000}
+                  onChange={(e) => setSettings({ ...settings, minimumAssetInvestment: parseInt(e.target.value) || 1000 })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Max Total Investable (₹)
+                </label>
+                <input
+                  type="number"
+                  value={settings?.maximumTotalInvestable ?? 8000}
+                  onChange={(e) => setSettings({ ...settings, maximumTotalInvestable: parseInt(e.target.value) || 8000 })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Stocks Return (%)
+                </label>
+                <input
+                  type="number"
+                  value={settings?.stockReturnPercent ?? 0}
+                  onChange={(e) => setSettings({ ...settings, stockReturnPercent: parseFloat(e.target.value) || 0 })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -1241,8 +1386,19 @@ export default function AdminDashboard() {
         onClose={() => setQrDisplayTeam(null)}
       />
 
+      {/* Round 2 Task Scoring Modal */}
+      <AdminTaskScoringModal
+        teams={teams}
+        defaultTeamId={taskScoringTeamId}
+        defaultTaskKey={selectedTaskKey}
+        isOpen={taskScoringOpen}
+        onClose={() => setTaskScoringOpen(false)}
+        onSuccess={loadAllData}
+        onOpenQRScanner={() => setQrScannerOpen(true)}
+      />
+
       {/* Mobile Sticky Bottom Floating Action Bar (Admin Mobile-Specific Navigation) */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-2 flex items-center justify-around shadow-2xl">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 px-2 py-2 pb-safe flex items-center justify-around shadow-2xl">
         <button
           onClick={() => setActiveTab('overview')}
           className={`flex flex-col items-center gap-1 p-1 text-[10px] font-bold ${activeTab === 'overview' ? 'text-amber-400' : 'text-slate-400'}`}
@@ -1252,11 +1408,11 @@ export default function AdminDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab('teams')}
-          className={`flex flex-col items-center gap-1 p-1 text-[10px] font-bold ${activeTab === 'teams' ? 'text-amber-400' : 'text-slate-400'}`}
+          onClick={() => setActiveTab('tasks')}
+          className={`flex flex-col items-center gap-1 p-1 text-[10px] font-bold ${activeTab === 'tasks' ? 'text-amber-400' : 'text-slate-400'}`}
         >
-          <Users className="w-5 h-5" />
-          <span>Teams</span>
+          <Flame className="w-5 h-5" />
+          <span>Tasks</span>
         </button>
 
         {/* Big Center Thumb SCAN QR Button */}
@@ -1269,11 +1425,11 @@ export default function AdminDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab('participants')}
-          className={`flex flex-col items-center gap-1 p-1 text-[10px] font-bold ${activeTab === 'participants' ? 'text-amber-400' : 'text-slate-400'}`}
+          onClick={() => setActiveTab('teams')}
+          className={`flex flex-col items-center gap-1 p-1 text-[10px] font-bold ${activeTab === 'teams' ? 'text-amber-400' : 'text-slate-400'}`}
         >
-          <ShieldCheck className="w-5 h-5" />
-          <span>Players</span>
+          <Users className="w-5 h-5" />
+          <span>Teams</span>
         </button>
 
         <button

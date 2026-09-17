@@ -62,16 +62,37 @@ export const getTeamByTeamId = (teamId) => request(`/teams/${teamId}`);
 export const lookupTeamForTransfer = (teamId) => request(`/teams/lookup/${teamId}`);
 
 // Round operations
-export const allocateRound1 = (cash, bank, stocks, gold) =>
+export const allocateRound1 = (bank, stocks, gold) =>
   request('/rounds/round1/allocate', {
     method: 'POST',
-    body: JSON.stringify({ cash, bank, stocks, gold })
+    body: JSON.stringify({ bank, stocks, gold })
   });
 
 export const adminModifyStockResult = (teamId, stockReturnPercent) =>
   request('/rounds/round1/admin/stock-result', {
     method: 'POST',
-    body: JSON.stringify({ teamId, stockReturnPercent })
+    body: JSON.stringify({ teamId, stockRate: stockReturnPercent })
+  });
+
+export const adminModifyAssetOutcome = (payload) =>
+  request('/rounds/round1/admin/asset-outcome', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+
+// Round 2 Arena Tasks
+export const getRound2Tasks = () => request('/rounds/round2/tasks');
+
+export const enterRound2Task = (taskKey, teamId = null) =>
+  request('/rounds/round2/tasks/enter', {
+    method: 'POST',
+    body: JSON.stringify({ taskKey, teamId })
+  });
+
+export const scoreRound2Task = (payload) =>
+  request('/rounds/round2/tasks/score', {
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 
 export const adminQuickMoneyUpdate = (teamId, amount, action, reason) =>

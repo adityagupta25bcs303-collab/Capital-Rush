@@ -16,6 +16,8 @@ const auditLogSchema = new mongoose.Schema({
       'MONEY_SUBTRACTED',
       'INVESTMENT_MODIFIED',
       'STOCK_RESULT_MODIFIED',
+      'ROUND2_TASK_SCORED',
+      'ROUND2_TASK_ENTERED',
       'ROUND_CHANGED',
       'GAME_STATUS_CHANGED',
       'TEAM_CREATED',

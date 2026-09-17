@@ -4,13 +4,13 @@ import { useSocket } from '../context/SocketContext';
 import { getMyTeam } from '../services/api';
 import QRDisplayModal from '../components/QRDisplayModal';
 import Round1InvestmentModal from '../components/Round1InvestmentModal';
-import Round3TransferModal from '../components/Round3TransferModal';
+import Round2TasksModal from '../components/Round2TasksModal';
 import {
   TrendingUp,
   Landmark,
   Sparkles,
   QrCode,
-  ArrowRightLeft,
+  Flame,
   Users,
   Clock,
   ArrowUpRight,
@@ -36,7 +36,7 @@ export default function ParticipantDashboard({ gameSettings }) {
   // Modals
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [investModalOpen, setInvestModalOpen] = useState(false);
-  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [tasksModalOpen, setTasksModalOpen] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -126,37 +126,36 @@ export default function ParticipantDashboard({ gameSettings }) {
 
   const roundTitles = {
     1: 'ROUND 1 — INVESTMENT STRATEGY',
-    2: 'ROUND 2 — PHYSICAL CHALLENGES',
-    3: 'ROUND 3 — PEER NEGOTIATION'
+    2: 'ROUND 2 — ARENA TASKS'
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* ELIMINATION WARNING BANNER */}
       {isEliminated && (
-        <div className="mb-6 p-5 sm:p-6 bg-rose-950/60 border-2 border-rose-500 rounded-3xl text-rose-200 flex flex-col sm:flex-row sm:items-center gap-4 shadow-2xl shadow-rose-950/60 animate-pulse">
-          <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center shrink-0">
-            <AlertOctagon className="w-8 h-8 text-rose-400" />
+        <div className="mb-6 p-4 sm:p-6 bg-rose-950/60 border-2 border-rose-500 rounded-3xl text-rose-200 flex flex-col sm:flex-row sm:items-center gap-4 shadow-2xl shadow-rose-950/60 animate-pulse">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center shrink-0">
+            <AlertOctagon className="w-7 h-7 sm:w-8 sm:h-8 text-rose-400" />
           </div>
           <div className="flex-1">
-            <div className="font-display font-black text-lg sm:text-xl text-rose-300 uppercase tracking-wide flex items-center gap-2">
+            <div className="font-display font-black text-base sm:text-xl text-rose-300 uppercase tracking-wide flex items-center gap-2">
               <span>TEAM ELIMINATED — GAME OVER</span>
               <span className="px-2 py-0.5 text-[10px] bg-rose-500 text-slate-950 font-black rounded-md">LOST</span>
             </div>
             <p className="text-xs sm:text-sm text-rose-200/90 mt-1">
-              Your team capital has dropped below ₹1,000 (Current: ₹{currentCapital.toLocaleString('en-IN')}). Under official CAPITAL RUSH tournament rules, any team with money decreasing less than ₹1,000 has lost and cannot continue trading, allocating investments, or transferring funds.
+              Your team capital has dropped below ₹1,000 (Current: ₹{currentCapital.toLocaleString('en-IN')}). Under official CAPITAL RUSH tournament rules, any team with money decreasing less than ₹1,000 has lost and cannot continue.
             </p>
           </div>
         </div>
       )}
 
       {/* Top Banner: Team Identity & Round Status */}
-      <div className={`border rounded-3xl p-6 sm:p-8 mb-8 relative overflow-hidden backdrop-blur-sm ${
+      <div className={`border rounded-3xl p-5 sm:p-8 mb-6 sm:mb-8 relative overflow-hidden backdrop-blur-sm ${
         isEliminated ? 'bg-rose-950/20 border-rose-900/50' : 'bg-slate-900/90 border-slate-800'
       }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-2.5 mb-2">
               <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono font-bold text-xs rounded-full">
                 TEAM ID: {team.teamId}
               </span>
@@ -170,7 +169,7 @@ export default function ParticipantDashboard({ gameSettings }) {
                 </span>
               )}
             </div>
-            <h1 className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight">
+            <h1 className="font-display font-black text-2xl sm:text-4xl text-white tracking-tight">
               {team.name}
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 flex items-center gap-2">
@@ -179,10 +178,10 @@ export default function ParticipantDashboard({ gameSettings }) {
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setQrModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl border border-slate-700 shadow-md transition active:scale-95"
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl border border-slate-700 shadow-md transition active:scale-95"
             >
               <QrCode className="w-4 h-4 text-amber-400" />
               <span>TEAM QR CODE</span>
@@ -205,13 +204,13 @@ export default function ParticipantDashboard({ gameSettings }) {
                   </button>
                 )}
 
-                {currentRound === 3 && gameStatus === 'LIVE' && (
+                {currentRound === 2 && gameStatus !== 'FINISHED' && (
                   <button
-                    onClick={() => setTransferModalOpen(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition active:scale-95 animate-pulse"
+                    onClick={() => setTasksModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg shadow-amber-500/20 transition active:scale-95 animate-pulse"
                   >
-                    <ArrowRightLeft className="w-4 h-4" />
-                    <span>TRANSFER MONEY</span>
+                    <Flame className="w-4 h-4" />
+                    <span>ARENA TASKS</span>
                   </button>
                 )}
               </>
@@ -299,8 +298,59 @@ export default function ParticipantDashboard({ gameSettings }) {
         </div>
       </div>
 
+      {/* Round 2: Interactive Arena Tasks Section (when currentRound === 2) */}
+      {currentRound === 2 && (
+        <div className="bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/30 rounded-3xl p-5 sm:p-7 mb-6 sm:mb-8 shadow-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-2">
+                <Flame className="w-3.5 h-3.5" /> ARENA CHALLENGES LIVE
+              </div>
+              <h2 className="font-display font-black text-xl sm:text-2xl text-white">
+                Round 2: 4 Task Challenges
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Pay entry fee, compete in campus challenges, and get rewarded based on difficulty & risk level!
+              </p>
+            </div>
+
+            <button
+              onClick={() => setTasksModalOpen(true)}
+              className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-display font-black text-xs rounded-xl shadow-lg shadow-amber-500/25 transition active:scale-95 flex items-center justify-center gap-2 shrink-0"
+            >
+              <Flame className="w-4 h-4" />
+              <span>BROWSE & ENTER TASKS</span>
+            </button>
+          </div>
+
+          {/* 4 Mini Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+            <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
+              <div className="text-[11px] font-bold text-amber-400 uppercase truncate">Who Am I</div>
+              <div className="text-[10px] sm:text-xs text-slate-300 font-semibold mt-0.5">Medium • 2.0x Reward</div>
+              <div className="font-mono text-xs sm:text-sm font-bold text-white mt-1">Fee: ₹300</div>
+            </div>
+            <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
+              <div className="text-[11px] font-bold text-emerald-400 uppercase truncate">Bounce The Ball</div>
+              <div className="text-[10px] sm:text-xs text-slate-300 font-semibold mt-0.5">Easy • 1.5x Reward</div>
+              <div className="font-mono text-xs sm:text-sm font-bold text-white mt-1">Fee: ₹200</div>
+            </div>
+            <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
+              <div className="text-[11px] font-bold text-purple-400 uppercase truncate">Eat The Cookies</div>
+              <div className="text-[10px] sm:text-xs text-slate-300 font-semibold mt-0.5">Mod. Hard • 2.5x</div>
+              <div className="font-mono text-xs sm:text-sm font-bold text-white mt-1">Fee: ₹400</div>
+            </div>
+            <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
+              <div className="text-[11px] font-bold text-rose-400 uppercase truncate">Run With The Pen</div>
+              <div className="text-[10px] sm:text-xs text-slate-300 font-semibold mt-0.5">Hard • 3.5x Reward</div>
+              <div className="font-mono text-xs sm:text-sm font-bold text-white mt-1">Fee: ₹600</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Portfolio Asset Allocation Breakdown */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 mb-8 shadow-xl">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-8 mb-6 sm:mb-8 shadow-xl">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="font-display font-bold text-xl text-white flex items-center gap-2">
@@ -478,12 +528,12 @@ export default function ParticipantDashboard({ gameSettings }) {
         onAllocated={fetchDashboardData}
       />
 
-      {/* Round 3 Peer Transfer Modal */}
-      <Round3TransferModal
-        myTeam={team}
-        isOpen={transferModalOpen}
-        onClose={() => setTransferModalOpen(false)}
-        onTransferred={fetchDashboardData}
+      {/* Round 2 Tasks Modal */}
+      <Round2TasksModal
+        team={team}
+        isOpen={tasksModalOpen}
+        onClose={() => setTasksModalOpen(false)}
+        onUpdated={fetchDashboardData}
       />
     </div>
   );

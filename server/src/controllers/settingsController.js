@@ -32,6 +32,10 @@ const updateSettings = async (req, res) => {
       minimumCash,
       bankReturnPercent,
       goldReturnPercent,
+      stockReturnPercent,
+      minimumAssetInvestment,
+      maximumTotalInvestable,
+      activeRound2Task,
       currentRound,
       gameStatus,
       announcement
@@ -49,7 +53,17 @@ const updateSettings = async (req, res) => {
     if (minimumCash !== undefined) settings.minimumCash = Number(minimumCash);
     if (bankReturnPercent !== undefined) settings.bankReturnPercent = Number(bankReturnPercent);
     if (goldReturnPercent !== undefined) settings.goldReturnPercent = Number(goldReturnPercent);
-    if (currentRound !== undefined) settings.currentRound = Number(currentRound);
+    if (stockReturnPercent !== undefined) settings.stockReturnPercent = Number(stockReturnPercent);
+    if (minimumAssetInvestment !== undefined) settings.minimumAssetInvestment = Number(minimumAssetInvestment);
+    if (maximumTotalInvestable !== undefined) settings.maximumTotalInvestable = Number(maximumTotalInvestable);
+    if (activeRound2Task !== undefined) settings.activeRound2Task = activeRound2Task;
+    if (currentRound !== undefined) {
+      const rNum = Number(currentRound);
+      if (![1, 2].includes(rNum)) {
+        return res.status(400).json({ success: false, message: 'Invalid round. Competition consists of only Round 1 and Round 2.' });
+      }
+      settings.currentRound = rNum;
+    }
     if (gameStatus !== undefined) settings.gameStatus = gameStatus;
     if (announcement !== undefined) settings.announcement = announcement;
 

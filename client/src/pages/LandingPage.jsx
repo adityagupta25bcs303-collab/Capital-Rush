@@ -27,21 +27,21 @@ export default function LandingPage({ gameSettings }) {
         </div>
 
         {/* Title & Tagline */}
-        <h1 className="font-display font-black text-5xl sm:text-7xl tracking-tight text-white mb-4 uppercase">
+        <h1 className="font-display font-black text-4xl sm:text-7xl tracking-tight text-white mb-4 uppercase">
           CAPITAL <span className="text-amber-400">RUSH</span>
         </h1>
-        <p className="text-xl sm:text-2xl font-bold tracking-widest text-slate-300 uppercase mb-6 font-display">
+        <p className="text-lg sm:text-2xl font-bold tracking-widest text-slate-300 uppercase mb-6 font-display">
           Think. Invest. Risk. Negotiate. Win.
         </p>
 
-        <p className="max-w-3xl mx-auto text-base sm:text-lg text-slate-400 leading-relaxed mb-10">
-          A high-stakes, 3-round collegiate financial strategy simulation. Teams start with{' '}
-          <span className="text-amber-300 font-bold">₹10,000</span> in capital, construct asset portfolios,
-          compete in physical challenges, and negotiate direct peer transfers to build the ultimate treasury.
+        <p className="max-w-3xl mx-auto text-sm sm:text-lg text-slate-400 leading-relaxed mb-10">
+          A high-stakes, 2-round collegiate financial strategy simulation. Teams start with{' '}
+          <span className="text-amber-300 font-bold">₹10,000</span> in capital, construct asset portfolios across Bank, Stocks, and Gold,
+          and enter 4 arena task challenges to build the ultimate treasury.
         </p>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-16">
           <Link
             to="/login"
             className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-display font-black tracking-wide text-base shadow-lg shadow-amber-500/25 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
@@ -67,64 +67,44 @@ export default function LandingPage({ gameSettings }) {
           </Link>
         </div>
 
-        {/* 3 Rounds Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left max-w-6xl mx-auto mb-20">
+        {/* 2 Rounds Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left max-w-4xl mx-auto mb-20">
           {/* Round 1 */}
-          <div className="bg-slate-900/70 border border-slate-800 hover:border-amber-500/50 rounded-2xl p-6 backdrop-blur-sm transition-all hover:-translate-y-1 group">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
+          <div className="bg-slate-900/70 border border-slate-800 hover:border-amber-500/50 rounded-3xl p-6 sm:p-7 backdrop-blur-sm transition-all hover:-translate-y-1 group">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
               <TrendingUp className="w-6 h-6" />
             </div>
             <div className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-1">
               ROUND 1
             </div>
             <h3 className="font-display font-bold text-2xl text-white mb-2">
-              INVEST
+              INVESTMENT STRATEGY
             </h3>
             <p className="text-sm text-slate-400 leading-relaxed mb-4">
-              Allocate ₹10,000 across Cash, Bank, simulated Stocks, and Gold. Keep minimum ₹2,000 cash and balance high-yield risk vs. guaranteed returns.
+              Allocate ₹10,000 across Bank, simulated Stocks, and Gold. Rules: invest at least ₹1,000 in each asset and maximum ₹8,000 total, keeping at least ₹2,000 liquid cash.
             </p>
             <div className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-              <span>Simulated Market Volatility</span>
+              <span>Admin-Driven Market Outcomes</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </div>
           </div>
 
           {/* Round 2 */}
-          <div className="bg-slate-900/70 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-6 backdrop-blur-sm transition-all hover:-translate-y-1 group">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
+          <div className="bg-slate-900/70 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-6 sm:p-7 backdrop-blur-sm transition-all hover:-translate-y-1 group">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
               <Activity className="w-6 h-6" />
             </div>
             <div className="text-xs font-bold uppercase tracking-widest text-emerald-400 mb-1">
               ROUND 2
             </div>
             <h3 className="font-display font-bold text-2xl text-white mb-2">
-              CHALLENGE
+              ARENA TASK CHALLENGES
             </h3>
             <p className="text-sm text-slate-400 leading-relaxed mb-4">
-              Real-world physical challenges conducted on campus. Administrators scan your permanent Team QR code to instantaneously credit winnings or apply penalties.
+              4 high-energy challenges: Who Am I (₹300), Bounce The Ball (₹200), Eat The Cookies (₹400), and Run With The Pen (₹600). Entry fees deducted with risk-adjusted payout rewards!
             </p>
             <div className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-              <span>Sub-second QR Balance Updates</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </div>
-          </div>
-
-          {/* Round 3 */}
-          <div className="bg-slate-900/70 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-6 backdrop-blur-sm transition-all hover:-translate-y-1 group">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition-transform">
-              <ArrowRightLeft className="w-6 h-6" />
-            </div>
-            <div className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-1">
-              ROUND 3
-            </div>
-            <h3 className="font-display font-bold text-2xl text-white mb-2">
-              NEGOTIATE
-            </h3>
-            <p className="text-sm text-slate-400 leading-relaxed mb-4">
-              Direct team-to-team peer bargaining. Form alliances, execute buyouts, and initiate direct capital transfers with mandatory confirmation preview.
-            </p>
-            <div className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-              <span>Autonomous Atomic Transfers</span>
+              <span>Sub-second QR Scoring & Payouts</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </div>
           </div>
