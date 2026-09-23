@@ -21,3 +21,6 @@ cloudflared.exe
 # OS
 .DS_Store
 Thumbs.db
+
+hf-space/
+
