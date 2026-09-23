@@ -8,6 +8,7 @@ const ROUND2_TASK_DEFINITIONS = {
     risk: 'Medium',
     entryFee: 300,
     defaultMultiplier: 2.0, // Returns ₹600 on win (+₹300 net)
+    defaultLossPenalty: 300, // Deducts ₹300 on loss
     description: 'Guess the financial identity or company profile from clues within 60 seconds.'
   },
   BOUNCE_THE_BALL: {
@@ -17,6 +18,7 @@ const ROUND2_TASK_DEFINITIONS = {
     risk: 'Easy',
     entryFee: 200,
     defaultMultiplier: 1.5, // Returns ₹300 on win (+₹100 net)
+    defaultLossPenalty: 200, // Deducts ₹200 on loss
     description: 'Keep the ball bouncing on a paddle for the designated time limit without dropping.'
   },
   EAT_THE_COOKIES: {
@@ -26,6 +28,7 @@ const ROUND2_TASK_DEFINITIONS = {
     risk: 'Medium-High',
     entryFee: 400,
     defaultMultiplier: 2.5, // Returns ₹1,000 on win (+₹600 net)
+    defaultLossPenalty: 400, // Deducts ₹400 on loss
     description: 'Face-cookie transfer challenge without hands into mouth in rapid succession.'
   },
   RUN_WITH_THE_PEN: {
@@ -35,6 +38,7 @@ const ROUND2_TASK_DEFINITIONS = {
     risk: 'Hard',
     entryFee: 600,
     defaultMultiplier: 3.5, // Returns ₹2,100 on win (+₹1,500 net)
+    defaultLossPenalty: 600, // Deducts ₹600 on loss
     description: 'Sprint through high-agility campus obstacle run balancing a pen with teammate.'
   }
 };
@@ -68,6 +72,10 @@ const round2TaskSchema = new mongoose.Schema({
     default: 1.0
   },
   rewardAmount: {
+    type: Number,
+    default: 0
+  },
+  lossAmount: {
     type: Number,
     default: 0
   },

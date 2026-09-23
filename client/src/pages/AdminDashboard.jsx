@@ -539,10 +539,10 @@ export default function AdminDashboard() {
             {/* The 4 Official Task Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               {[
-                { key: 'WHO_AM_I', name: 'Who Am I', diff: 'Medium', risk: 'Medium', fee: 300, mult: 2.0, color: 'text-amber-400', border: 'border-amber-500/30' },
-                { key: 'BOUNCE_THE_BALL', name: 'Bounce The Ball', diff: 'Easy', risk: 'Easy', fee: 200, mult: 1.5, color: 'text-emerald-400', border: 'border-emerald-500/30' },
-                { key: 'EAT_THE_COOKIES', name: 'Eat The Cookies', diff: 'Moderately Hard', risk: 'Medium-High', fee: 400, mult: 2.5, color: 'text-purple-400', border: 'border-purple-500/30' },
-                { key: 'RUN_WITH_THE_PEN', name: 'Run With The Pen', diff: 'Hard', risk: 'Hard', fee: 600, mult: 3.5, color: 'text-rose-400', border: 'border-rose-500/30' }
+                { key: 'WHO_AM_I', name: 'Who Am I', diff: 'Medium', risk: 'Medium', fee: 300, mult: 2.0, loss: 300, color: 'text-amber-400', border: 'border-amber-500/30' },
+                { key: 'BOUNCE_THE_BALL', name: 'Bounce The Ball', diff: 'Easy', risk: 'Easy', fee: 200, mult: 1.5, loss: 200, color: 'text-emerald-400', border: 'border-emerald-500/30' },
+                { key: 'EAT_THE_COOKIES', name: 'Eat The Cookies', diff: 'Moderately Hard', risk: 'Medium-High', fee: 400, mult: 2.5, loss: 400, color: 'text-purple-400', border: 'border-purple-500/30' },
+                { key: 'RUN_WITH_THE_PEN', name: 'Run With The Pen', diff: 'Hard', risk: 'Hard', fee: 600, mult: 3.5, loss: 600, color: 'text-rose-400', border: 'border-rose-500/30' }
               ].map((task) => (
                 <div key={task.key} className={`bg-slate-950 p-4 rounded-2xl border ${task.border} flex flex-col justify-between`}>
                   <div>
@@ -557,7 +557,8 @@ export default function AdminDashboard() {
                     <div className="text-xs text-slate-300 space-y-1 mb-4">
                       <div>Difficulty: <strong className="text-white">{task.diff}</strong></div>
                       <div>Risk Level: <strong className="text-white">{task.risk}</strong></div>
-                      <div>Default Payout: <strong className="text-emerald-400">{task.mult}x (₹{Math.round(task.fee * task.mult)})</strong></div>
+                      <div>Win Payout: <strong className="text-emerald-400">+{task.mult}x (+₹{Math.round(task.fee * task.mult)})</strong></div>
+                      <div>Loss Penalty: <strong className="text-rose-400">-₹{task.loss}</strong></div>
                     </div>
                   </div>
 

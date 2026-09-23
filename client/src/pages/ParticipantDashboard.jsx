@@ -327,23 +327,27 @@ export default function ParticipantDashboard({ gameSettings }) {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
             <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
               <div className="text-[11px] font-bold text-amber-400 uppercase truncate">Who Am I</div>
-              <div className="text-[10px] sm:text-xs text-slate-300 font-semibold mt-0.5">Medium • 2.0x Reward</div>
-              <div className="font-mono text-xs sm:text-sm font-bold text-white mt-1">Fee: ₹300</div>
+              <div className="font-mono text-xs font-bold text-white mt-0.5">Fee: ₹300</div>
+              <div className="text-[10px] text-emerald-400 font-semibold mt-1">Win: +₹600 (2.0x)</div>
+              <div className="text-[10px] text-rose-400 font-semibold">Loss: -₹300</div>
             </div>
             <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
               <div className="text-[11px] font-bold text-emerald-400 uppercase truncate">Bounce The Ball</div>
-              <div className="text-[10px] sm:text-xs text-slate-300 font-semibold mt-0.5">Easy • 1.5x Reward</div>
-              <div className="font-mono text-xs sm:text-sm font-bold text-white mt-1">Fee: ₹200</div>
+              <div className="font-mono text-xs font-bold text-white mt-0.5">Fee: ₹200</div>
+              <div className="text-[10px] text-emerald-400 font-semibold mt-1">Win: +₹300 (1.5x)</div>
+              <div className="text-[10px] text-rose-400 font-semibold">Loss: -₹200</div>
             </div>
             <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
               <div className="text-[11px] font-bold text-purple-400 uppercase truncate">Eat The Cookies</div>
-              <div className="text-[10px] sm:text-xs text-slate-300 font-semibold mt-0.5">Mod. Hard • 2.5x</div>
-              <div className="font-mono text-xs sm:text-sm font-bold text-white mt-1">Fee: ₹400</div>
+              <div className="font-mono text-xs font-bold text-white mt-0.5">Fee: ₹400</div>
+              <div className="text-[10px] text-emerald-400 font-semibold mt-1">Win: +₹1,000 (2.5x)</div>
+              <div className="text-[10px] text-rose-400 font-semibold">Loss: -₹400</div>
             </div>
             <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
               <div className="text-[11px] font-bold text-rose-400 uppercase truncate">Run With The Pen</div>
-              <div className="text-[10px] sm:text-xs text-slate-300 font-semibold mt-0.5">Hard • 3.5x Reward</div>
-              <div className="font-mono text-xs sm:text-sm font-bold text-white mt-1">Fee: ₹600</div>
+              <div className="font-mono text-xs font-bold text-white mt-0.5">Fee: ₹600</div>
+              <div className="text-[10px] text-emerald-400 font-semibold mt-1">Win: +₹2,100 (3.5x)</div>
+              <div className="text-[10px] text-rose-400 font-semibold">Loss: -₹600</div>
             </div>
           </div>
         </div>

@@ -143,28 +143,36 @@ export default function Round2TasksModal({ team, isOpen, onClose, onUpdated }) {
                 </p>
 
                 {/* Status or Join Button */}
-                <div className="pt-2.5 border-t border-slate-800/80 flex items-center justify-between">
-                  <div className="text-[11px]">
-                    <span className="text-slate-400">Reward: </span>
-                    <strong className="text-emerald-400 font-mono">
-                      {task.defaultMultiplier}x (₹{Math.round(task.entryFee * task.defaultMultiplier)})
-                    </strong>
+                <div className="pt-2.5 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="text-[11px] space-y-0.5">
+                    <div>
+                      <span className="text-slate-400">Win Reward: </span>
+                      <strong className="text-emerald-400 font-mono">
+                        +{task.defaultMultiplier}x (+₹{Math.round(task.entryFee * task.defaultMultiplier)})
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Loss Penalty: </span>
+                      <strong className="text-rose-400 font-mono">
+                        -₹{task.defaultLossPenalty || task.entryFee}
+                      </strong>
+                    </div>
                   </div>
 
                   {myEntry ? (
-                    <div className="text-right">
+                    <div className="text-left sm:text-right shrink-0">
                       {myEntry.status === 'WON' && (
-                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold text-xs rounded-lg border border-emerald-500/30">
+                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold text-xs rounded-lg border border-emerald-500/30 inline-block">
                           🏆 WON (+₹{myEntry.rewardAmount})
                         </span>
                       )}
                       {myEntry.status === 'LOST' && (
-                        <span className="px-2 py-1 bg-rose-500/20 text-rose-300 font-bold text-xs rounded-lg border border-rose-500/30">
-                          ✕ LOST
+                        <span className="px-2 py-1 bg-rose-500/20 text-rose-300 font-bold text-xs rounded-lg border border-rose-500/30 inline-block">
+                          ✕ LOST (-₹{myEntry.lossAmount || task.defaultLossPenalty || task.entryFee})
                         </span>
                       )}
                       {myEntry.status === 'ENTERED' && (
-                        <span className="px-2 py-1 bg-amber-500/20 text-amber-300 font-bold text-xs rounded-lg border border-amber-500/30 animate-pulse">
+                        <span className="px-2 py-1 bg-amber-500/20 text-amber-300 font-bold text-xs rounded-lg border border-amber-500/30 animate-pulse inline-block">
                           ⏳ In Arena
                         </span>
                       )}

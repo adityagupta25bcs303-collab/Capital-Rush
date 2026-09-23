@@ -457,9 +457,11 @@ const scoreRound2Task = async (req, res) => {
     const {
       teamId,
       taskKey,
-      result, // 'WIN' | 'LOSS' | 'CUSTOM'
+      result, // 'WIN' | 'LOSS' | 'PENALTY' | 'CUSTOM'
       customMultiplier,
       customAmount,
+      lossAmount,
+      customPenalty,
       notes
     } = req.body;
 
@@ -490,7 +492,7 @@ const scoreRound2Task = async (req, res) => {
       if (team.currentCapital - entryFeeDeducted < 1000) {
         return res.status(400).json({
           success: false,
-          message: `Team capital (₹${team.currentCapital}) is insufficient for ₹${entryFeeDeducted} entry fee (must stay >= ₹1,000).`
+          message: `Team capital (₹${team.currentCapital.toLocaleString('en-IN')}) is insufficient for ₹${entryFeeDeducted} entry fee (must stay >= ₹1,000).`
         });
       }
       taskRecord = await Round2Task.create({
@@ -508,6 +510,7 @@ const scoreRound2Task = async (req, res) => {
     }
 
     let payoutAmount = 0;
+    let penaltyAmount = 0;
     let multiplierUsed = 1.0;
     const cleanResult = (result || 'WIN').toUpperCase();
 
@@ -517,52 +520,81 @@ const scoreRound2Task = async (req, res) => {
     } else if (cleanResult === 'CUSTOM') {
       payoutAmount = Number(customAmount) || 0;
       multiplierUsed = Number(customMultiplier) || 1.0;
-    } else {
-      // LOSS: 0 payout (entry fee is forfeited)
-      payoutAmount = 0;
+    } else if (cleanResult === 'LOSS' || cleanResult === 'PENALTY') {
+      // LOSS / PENALTY: Deducts money based on risk and difficulty level or custom penalty
       multiplierUsed = 0;
+      payoutAmount = 0;
+
+      const requestedPenalty = lossAmount !== undefined && lossAmount !== null && lossAmount !== ''
+        ? Number(lossAmount)
+        : (customPenalty !== undefined && customPenalty !== null && customPenalty !== '' ? Number(customPenalty) : null);
+
+      if (requestedPenalty !== null && !isNaN(requestedPenalty)) {
+        penaltyAmount = Math.abs(requestedPenalty);
+      } else {
+        penaltyAmount = taskDef.defaultLossPenalty || taskDef.entryFee;
+      }
     }
 
-    // Apply payout if > 0
     let updatedTeam = team;
+    let balanceDelta = 0;
+
     if (payoutAmount > 0) {
+      // Credit win payout
+      balanceDelta = payoutAmount;
       updatedTeam = await Team.findByIdAndUpdate(
         team._id,
         { $inc: { currentCapital: payoutAmount } },
         { new: true }
       );
       await Portfolio.updateOne({ team: team._id }, { $inc: { cash: payoutAmount, totalValuation: payoutAmount } });
+    } else if (penaltyAmount > 0) {
+      // Deduct loss penalty
+      balanceDelta = -penaltyAmount;
+      updatedTeam = await Team.findByIdAndUpdate(
+        team._id,
+        { $inc: { currentCapital: -penaltyAmount } },
+        { new: true }
+      );
+      await Portfolio.updateOne({ team: team._id }, { $inc: { cash: -penaltyAmount, totalValuation: -penaltyAmount } });
     }
 
-    // Check elimination
+    // Check elimination (< ₹1,000)
+    let isNowEliminated = false;
     if (updatedTeam.currentCapital < 1000) {
       updatedTeam.status = 'DISQUALIFIED';
+      updatedTeam.isEliminated = true;
       await updatedTeam.save();
+      isNowEliminated = true;
     } else if (updatedTeam.status === 'DISQUALIFIED' && updatedTeam.currentCapital >= 1000) {
       updatedTeam.status = 'ACTIVE';
+      updatedTeam.isEliminated = false;
       await updatedTeam.save();
     }
 
     // Update task record
-    taskRecord.status = cleanResult === 'WIN' ? 'WON' : cleanResult === 'LOSS' ? 'LOST' : 'SCORED';
+    taskRecord.status = cleanResult === 'WIN' ? 'WON' : (cleanResult === 'LOSS' || cleanResult === 'PENALTY' ? 'LOST' : 'SCORED');
     taskRecord.rewardAmount = payoutAmount;
+    taskRecord.lossAmount = penaltyAmount;
     taskRecord.multiplierApplied = multiplierUsed;
     taskRecord.scoredBy = req.user.adminId;
-    taskRecord.notes = notes || `${cleanResult}: ${taskDef.name}`;
+    taskRecord.notes = notes || `${cleanResult}: ${taskDef.name} ${penaltyAmount > 0 ? `(-₹${penaltyAmount})` : `(+₹${payoutAmount})`}`;
     await taskRecord.save();
 
     // Transaction
     const txn = await Transaction.create({
       transactionId: generateTransactionId(),
       team: team._id,
-      type: cleanResult === 'WIN' ? 'ROUND2_REWARD' : (cleanResult === 'LOSS' ? 'ROUND2_PENALTY' : 'ADMIN_CREDIT'),
-      amount: payoutAmount,
+      type: cleanResult === 'WIN' ? 'ROUND2_REWARD' : 'ROUND2_PENALTY',
+      amount: balanceDelta,
       previousBalance: team.currentCapital,
       newBalance: updatedTeam.currentCapital,
-      reason: `Task Outcome [${cleanResult}]: "${taskDef.name}" (${multiplierUsed > 0 ? `${multiplierUsed}x reward` : 'Entry Fee Lost'})`,
+      reason: cleanResult === 'WIN'
+        ? `Task Reward [WIN]: "${taskDef.name}" (+₹${payoutAmount.toLocaleString('en-IN')})`
+        : `Task Loss Penalty: "${taskDef.name}" (-₹${penaltyAmount.toLocaleString('en-IN')})`,
       round: 2,
       performedBy: req.user.adminId,
-      metadata: { taskKey, multiplier: multiplierUsed, result: cleanResult }
+      metadata: { taskKey, multiplier: multiplierUsed, result: cleanResult, penaltyAmount, payoutAmount }
     });
 
     await logAdminAction({
@@ -573,6 +605,7 @@ const scoreRound2Task = async (req, res) => {
         taskName: taskDef.name,
         result: cleanResult,
         payoutAmount,
+        penaltyAmount,
         multiplier: multiplierUsed,
         newBalance: updatedTeam.currentCapital
       },
@@ -586,12 +619,26 @@ const scoreRound2Task = async (req, res) => {
     });
     emitLeaderboardUpdate({ trigger: 'task_scored' });
 
+    let resultMsg = '';
+    if (cleanResult === 'WIN') {
+      resultMsg = `Recorded WIN for ${team.name} on "${taskDef.name}"! Credited ₹${payoutAmount.toLocaleString('en-IN')} reward (+${multiplierUsed}x).`;
+    } else if (penaltyAmount > 0) {
+      resultMsg = `Recorded LOSS for ${team.name} on "${taskDef.name}"! Deducted ₹${penaltyAmount.toLocaleString('en-IN')} penalty from team capital.`;
+    } else {
+      resultMsg = `Recorded ${cleanResult} for ${team.name} on "${taskDef.name}".`;
+    }
+
+    if (isNowEliminated) {
+      resultMsg += ` ⚠️ TEAM ELIMINATED: Capital is now ₹${updatedTeam.currentCapital.toLocaleString('en-IN')} (below ₹1,000 threshold)!`;
+    }
+
     return res.status(200).json({
       success: true,
-      message: `Recorded ${cleanResult} for ${team.name} on "${taskDef.name}"! ${payoutAmount > 0 ? `Credited ₹${payoutAmount.toLocaleString('en-IN')}` : 'Entry fee forfeited.'}`,
+      message: resultMsg,
       team: {
         teamId: updatedTeam.teamId,
-        newBalance: updatedTeam.currentCapital
+        newBalance: updatedTeam.currentCapital,
+        isEliminated: isNowEliminated
       },
       taskRecord
     });
