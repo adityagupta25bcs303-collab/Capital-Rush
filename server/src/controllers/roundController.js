@@ -317,18 +317,46 @@ const adminModifyAssetOutcome = async (req, res) => {
  */
 const getRound2Tasks = async (req, res) => {
   try {
-    const tasks = Object.values(ROUND2_TASK_DEFINITIONS);
+    const taskDefs = Object.values(ROUND2_TASK_DEFINITIONS);
     let teamTasks = [];
+    let activeTask = null;
+    let lastCompletedTaskKey = null;
 
     if (req.user && req.user.team) {
       const teamId = req.user.team._id || req.user.team;
       teamTasks = await Round2Task.find({ team: teamId }).sort({ createdAt: -1 });
+
+      activeTask = teamTasks.find((t) => t.status === 'ENTERED') || null;
+      const lastCompleted = teamTasks.find((t) => ['WON', 'LOST', 'SCORED'].includes(t.status));
+      if (lastCompleted) {
+        lastCompletedTaskKey = lastCompleted.taskKey;
+      }
     }
+
+    const tasks = taskDefs.map((def) => {
+      const entriesForThisTask = teamTasks.filter((t) => t.taskKey === def.key);
+      const isCurrentlyEntered = activeTask && activeTask.taskKey === def.key;
+      const isCooldown = !activeTask && lastCompletedTaskKey === def.key;
+      const timesPlayed = entriesForThisTask.filter((t) => ['WON', 'LOST', 'SCORED'].includes(t.status)).length;
+      const lastEntry = entriesForThisTask[0] || null;
+
+      return {
+        ...def,
+        isCurrentlyEntered,
+        isCooldown,
+        timesPlayed,
+        lastResult: lastEntry && lastEntry.status !== 'ENTERED' ? lastEntry.status : null,
+        lastReward: lastEntry ? lastEntry.rewardAmount : 0,
+        lastLoss: lastEntry ? lastEntry.lossAmount : 0
+      };
+    });
 
     return res.status(200).json({
       success: true,
       tasks,
-      teamTasks
+      teamTasks,
+      activeTask,
+      lastCompletedTaskKey
     });
   } catch (error) {
     console.error('Error getting Round 2 tasks:', error);
@@ -338,11 +366,7 @@ const getRound2Tasks = async (req, res) => {
 
 /**
  * Enter / Register a team into a Round 2 task (deducts entry fee)
- * Tasks & Entry fees:
- * 1. Who Am I: ₹300
- * 2. Bounce The Ball: ₹200
- * 3. Eat The Cookies: ₹400
- * 4. Run With The Pen: ₹600
+ * Rule: Teams can replay a game, BUT only after playing a different task first.
  */
 const enterRound2Task = async (req, res) => {
   try {
@@ -376,6 +400,31 @@ const enterRound2Task = async (req, res) => {
       });
     }
 
+    // 1. Check if team already has an active challenge in progress
+    const activeTask = await Round2Task.findOne({
+      team: team._id,
+      status: 'ENTERED'
+    });
+    if (activeTask) {
+      return res.status(400).json({
+        success: false,
+        message: `Your team is currently in the arena for "${activeTask.taskName}". You must complete that challenge and be scored before entering another task.`
+      });
+    }
+
+    // 2. Check alternation / consecutive replay rule
+    const lastCompletedTask = await Round2Task.findOne({
+      team: team._id,
+      status: { $in: ['WON', 'LOST', 'SCORED'] }
+    }).sort({ updatedAt: -1, createdAt: -1 });
+
+    if (lastCompletedTask && lastCompletedTask.taskKey === taskKey) {
+      return res.status(400).json({
+        success: false,
+        message: `Cooldown active: You just played "${taskDef.name}". You must play a different task before replaying "${taskDef.name}" again.`
+      });
+    }
+
     // Check if team has enough capital to pay entry fee and stay >= ₹1,000
     if (team.currentCapital - taskDef.entryFee < 1000) {
       return res.status(400).json({
@@ -395,11 +444,13 @@ const enterRound2Task = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Transaction rejected: Insufficient balance or survival threshold violated.' });
     }
 
-    // Update portfolio cash
-    await Portfolio.findOneAndUpdate(
-      { team: team._id },
-      { $inc: { cash: -taskDef.entryFee, totalValuation: -taskDef.entryFee } }
-    );
+    // Update portfolio with waterfall deduction: Cash -> Bank -> Gold -> Stocks
+    let portfolio = await Portfolio.findOne({ team: team._id });
+    if (!portfolio) {
+      portfolio = new Portfolio({ team: team._id, cash: team.currentCapital });
+    }
+    portfolio.deductFunds(taskDef.entryFee);
+    await portfolio.save();
 
     // Create Round2Task record
     const taskRecord = await Round2Task.create({
@@ -430,6 +481,7 @@ const enterRound2Task = async (req, res) => {
     emitToTeam(team.teamId, 'balance_updated', {
       teamId: team.teamId,
       currentCapital: updatedTeam.currentCapital,
+      portfolio,
       latestTransaction: txn
     });
     emitLeaderboardUpdate({ trigger: 'task_entry' });
@@ -503,9 +555,12 @@ const scoreRound2Task = async (req, res) => {
         status: 'ENTERED',
         scoredBy: req.user.adminId
       });
-      // Deduct entry fee
+      // Deduct entry fee using waterfall
       await Team.updateOne({ _id: team._id }, { $inc: { currentCapital: -entryFeeDeducted } });
-      await Portfolio.updateOne({ team: team._id }, { $inc: { cash: -entryFeeDeducted, totalValuation: -entryFeeDeducted } });
+      let entryPortfolio = await Portfolio.findOne({ team: team._id });
+      if (!entryPortfolio) entryPortfolio = new Portfolio({ team: team._id, cash: team.currentCapital });
+      entryPortfolio.deductFunds(entryFeeDeducted);
+      await entryPortfolio.save();
       team.currentCapital -= entryFeeDeducted;
     }
 
@@ -538,25 +593,31 @@ const scoreRound2Task = async (req, res) => {
 
     let updatedTeam = team;
     let balanceDelta = 0;
+    let portfolio = await Portfolio.findOne({ team: team._id });
+    if (!portfolio) {
+      portfolio = new Portfolio({ team: team._id, cash: team.currentCapital });
+    }
 
     if (payoutAmount > 0) {
-      // Credit win payout
+      // Credit win payout into liquid cash
       balanceDelta = payoutAmount;
       updatedTeam = await Team.findByIdAndUpdate(
         team._id,
         { $inc: { currentCapital: payoutAmount } },
         { new: true }
       );
-      await Portfolio.updateOne({ team: team._id }, { $inc: { cash: payoutAmount, totalValuation: payoutAmount } });
+      portfolio.addFunds(payoutAmount);
+      await portfolio.save();
     } else if (penaltyAmount > 0) {
-      // Deduct loss penalty
+      // Deduct loss penalty using waterfall: Cash -> Bank -> Gold -> Stocks
       balanceDelta = -penaltyAmount;
       updatedTeam = await Team.findByIdAndUpdate(
         team._id,
         { $inc: { currentCapital: -penaltyAmount } },
         { new: true }
       );
-      await Portfolio.updateOne({ team: team._id }, { $inc: { cash: -penaltyAmount, totalValuation: -penaltyAmount } });
+      portfolio.deductFunds(penaltyAmount);
+      await portfolio.save();
     }
 
     // Check elimination (< ₹1,000)
@@ -615,6 +676,7 @@ const scoreRound2Task = async (req, res) => {
     emitToTeam(team.teamId, 'balance_updated', {
       teamId: team.teamId,
       currentCapital: updatedTeam.currentCapital,
+      portfolio,
       latestTransaction: txn
     });
     emitLeaderboardUpdate({ trigger: 'task_scored' });
@@ -708,11 +770,17 @@ const adminQuickMoneyUpdate = async (req, res) => {
       await updatedTeam.save();
     }
 
-    // Also update portfolio cash to keep in sync
-    await Portfolio.findOneAndUpdate(
-      { team: team._id },
-      { $inc: { cash: balanceDelta, totalValuation: balanceDelta } }
-    );
+    // Update portfolio with waterfall deduction or cash addition
+    let portfolio = await Portfolio.findOne({ team: team._id });
+    if (!portfolio) {
+      portfolio = new Portfolio({ team: team._id, cash: previousBalance });
+    }
+    if (cleanAction === 'SUBTRACT') {
+      portfolio.deductFunds(numAmount);
+    } else {
+      portfolio.addFunds(numAmount);
+    }
+    await portfolio.save();
 
     const txnType = cleanAction === 'ADD'
       ? (currentRound === 2 ? 'ROUND2_REWARD' : 'ADMIN_CREDIT')
@@ -748,6 +816,7 @@ const adminQuickMoneyUpdate = async (req, res) => {
     emitToTeam(updatedTeam.teamId, 'balance_updated', {
       teamId: updatedTeam.teamId,
       currentCapital: updatedTeam.currentCapital,
+      portfolio,
       latestTransaction: txn
     });
     emitLeaderboardUpdate({ trigger: 'admin_money_update' });

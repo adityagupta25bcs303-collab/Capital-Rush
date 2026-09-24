@@ -11,53 +11,51 @@ const { generateTransactionId } = require('../utils/idGenerator');
 
 const seedInitialData = async () => {
   try {
-    console.log('[SEED] Checking database state...');
+    console.log('[SEED] Checking database state in persistent storage...');
 
-    const existingTeams = await Team.countDocuments();
-    if (existingTeams > 0) {
-      console.log('[SEED] Database already contains data. Skipping initial seeding.');
-      return;
-    }
-
-    console.log('[SEED] Database empty. Beginning initial seed...');
-
-    // 1. Initialize Game Settings
-    await GameSettings.deleteMany({});
-    const settings = await GameSettings.create({
-      startingCapital: 10000,
-      minimumCash: 2000,
-      bankReturnPercent: 5,
-      goldReturnPercent: 8,
-      currentRound: 1,
-      gameStatus: 'LIVE',
-      announcement: 'Welcome to CAPITAL RUSH 2026! Round 1 (Investment Strategy) is now active.'
-    });
-    console.log('[SEED] Initialized GameSettings.');
-
-    // 2. Teams initialized to ZERO default (increases dynamically as teams are created or participants register)
-    console.log('[SEED] Teams initialized to 0. Ready for dynamic team registrations.');
-
-    // 3. Participants start at ZERO default (increases as participants register or are added by admin)
-    console.log('[SEED] Participant users initialized to 0. Ready for live event registrations.');
-
-    // 4. Create 10 Administrators
-    const adminPasswordHash = await bcrypt.hash('admin123', 10);
-    const admins = [];
-    for (let i = 1; i <= 10; i++) {
-      const adminId = `ADMIN${String(i).padStart(2, '0')}`;
-      admins.push({
-        name: `Admin Officer ${i}`,
-        adminId,
-        password: adminPasswordHash,
-        role: 'ADMIN',
-        status: 'ACTIVE'
+    // 1. Initialize Game Settings if not already present
+    let settings = await GameSettings.findOne();
+    if (!settings) {
+      settings = await GameSettings.create({
+        startingCapital: 10000,
+        minimumCash: 2000,
+        bankReturnPercent: 5,
+        goldReturnPercent: 8,
+        currentRound: 1,
+        gameStatus: 'LIVE',
+        announcement: 'Welcome to CAPITAL RUSH 2026! Round 1 (Investment Strategy) is now active.'
       });
+      console.log('[SEED] Initialized GameSettings.');
+    } else {
+      console.log(`[SEED] Existing GameSettings loaded (Round ${settings.currentRound}, Status: ${settings.gameStatus}).`);
     }
 
-    await User.insertMany(admins);
-    console.log(`[SEED] Created 10 administrator accounts (ADMIN01 to ADMIN10).`);
+    // 2. Create 10 Administrators if not already present
+    const existingAdmins = await User.countDocuments({ role: 'ADMIN' });
+    if (existingAdmins === 0) {
+      const adminPasswordHash = await bcrypt.hash('admin123', 10);
+      const admins = [];
+      for (let i = 1; i <= 10; i++) {
+        const adminId = `ADMIN${String(i).padStart(2, '0')}`;
+        admins.push({
+          name: `Admin Officer ${i}`,
+          adminId,
+          password: adminPasswordHash,
+          role: 'ADMIN',
+          status: 'ACTIVE'
+        });
+      }
+      await User.insertMany(admins);
+      console.log(`[SEED] Created 10 administrator accounts (ADMIN01 to ADMIN10).`);
+    } else {
+      console.log(`[SEED] Verified ${existingAdmins} administrator accounts in database.`);
+    }
 
-    console.log('[SEED] Seeding completed successfully!');
+    // 3. Log current team and participant counts
+    const teamCount = await Team.countDocuments();
+    const participantCount = await User.countDocuments({ role: 'PARTICIPANT' });
+    console.log(`[SEED] Database verified: ${teamCount} teams, ${participantCount} participants safely loaded from persistent storage.`);
+    console.log('[SEED] Seeding check completed successfully!');
   } catch (error) {
     console.error('[SEED] Error during database seeding:', error);
   }

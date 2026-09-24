@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { getMyTeam } from '../services/api';
+import { getMyTeam, getStoredTeam, setStoredTeam, getStoredPortfolio, setStoredPortfolio } from '../services/api';
 import QRDisplayModal from '../components/QRDisplayModal';
 import Round1InvestmentModal from '../components/Round1InvestmentModal';
 import Round2TasksModal from '../components/Round2TasksModal';
@@ -19,19 +19,21 @@ import {
   RefreshCw,
   Coins,
   AlertOctagon,
-  Ban
+  Ban,
+  WifiOff
 } from 'lucide-react';
 
 export default function ParticipantDashboard({ gameSettings }) {
   const { user } = useAuth();
-  const { joinTeamRoom, leaveTeamRoom, lastBalanceUpdate, lastRoundUpdate } = useSocket();
+  const { joinTeamRoom, leaveTeamRoom, lastBalanceUpdate, lastRoundUpdate, isConnected } = useSocket();
 
-  const [team, setTeam] = useState(null);
-  const [portfolio, setPortfolio] = useState(null);
+  const [team, setTeam] = useState(() => user?.team || getStoredTeam() || null);
+  const [portfolio, setPortfolio] = useState(() => user?.portfolio || getStoredPortfolio() || null);
   const [members, setMembers] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !user?.team && !getStoredTeam());
   const [refreshing, setRefreshing] = useState(false);
+  const [isServerOffline, setIsServerOffline] = useState(false);
 
   // Modals
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -44,11 +46,17 @@ export default function ParticipantDashboard({ gameSettings }) {
       if (res.success) {
         setTeam(res.team);
         setPortfolio(res.portfolio);
+        setStoredTeam(res.team);
+        setStoredPortfolio(res.portfolio);
         setMembers(res.members || []);
         setTransactions(res.transactions || []);
+        setIsServerOffline(false);
       }
     } catch (err) {
-      console.error('Error loading team data:', err);
+      console.warn('Dashboard sync issue:', err.message);
+      if (err.isNetworkError || !navigator.onLine || !isConnected) {
+        setIsServerOffline(true);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -57,6 +65,21 @@ export default function ParticipantDashboard({ gameSettings }) {
 
   useEffect(() => {
     fetchDashboardData();
+  }, []);
+
+  // Auto-refresh when device wakes up or returns to the browser tab
+  useEffect(() => {
+    const handleWakeup = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        fetchDashboardData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleWakeup);
+    window.addEventListener('online', handleWakeup);
+    return () => {
+      document.removeEventListener('visibilitychange', handleWakeup);
+      window.removeEventListener('online', handleWakeup);
+    };
   }, []);
 
   // Join WebSocket room for real-time team balance updates
@@ -72,12 +95,17 @@ export default function ParticipantDashboard({ gameSettings }) {
   // Handle WebSocket updates
   useEffect(() => {
     if (lastBalanceUpdate && team && lastBalanceUpdate.teamId === team.teamId) {
-      setTeam((prev) => ({
-        ...prev,
-        currentCapital: lastBalanceUpdate.currentCapital
-      }));
+      setTeam((prev) => {
+        const updated = {
+          ...prev,
+          currentCapital: lastBalanceUpdate.currentCapital
+        };
+        setStoredTeam(updated);
+        return updated;
+      });
       if (lastBalanceUpdate.portfolio) {
         setPortfolio(lastBalanceUpdate.portfolio);
+        setStoredPortfolio(lastBalanceUpdate.portfolio);
       }
       if (lastBalanceUpdate.latestTransaction) {
         setTransactions((prev) => [lastBalanceUpdate.latestTransaction, ...prev]);
@@ -131,6 +159,25 @@ export default function ParticipantDashboard({ gameSettings }) {
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* OFFLINE / RECONNECTING RESILIENCE BANNER */}
+      {isServerOffline && (
+        <div className="mb-5 p-3.5 sm:p-4 bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+            <span>
+              <strong>Host Connection Paused:</strong> Showing your latest verified portfolio data. Balance and transactions will automatically sync the moment host connection resumes.
+            </span>
+          </div>
+          <button
+            onClick={handleManualRefresh}
+            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition self-start sm:self-auto shrink-0 flex items-center gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>RECONNECT</span>
+          </button>
+        </div>
+      )}
+
       {/* ELIMINATION WARNING BANNER */}
       {isEliminated && (
         <div className="mb-6 p-4 sm:p-6 bg-rose-950/60 border-2 border-rose-500 rounded-3xl text-rose-200 flex flex-col sm:flex-row sm:items-center gap-4 shadow-2xl shadow-rose-950/60 animate-pulse">
@@ -310,7 +357,7 @@ export default function ParticipantDashboard({ gameSettings }) {
                 Round 2: 4 Task Challenges
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Pay entry fee, compete in campus challenges, and get rewarded based on difficulty & risk level!
+                Pay entry fee and compete in campus challenges based on difficulty level!
               </p>
             </div>
 
@@ -328,26 +375,22 @@ export default function ParticipantDashboard({ gameSettings }) {
             <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
               <div className="text-[11px] font-bold text-amber-400 uppercase truncate">Who Am I</div>
               <div className="font-mono text-xs font-bold text-white mt-0.5">Fee: ₹300</div>
-              <div className="text-[10px] text-emerald-400 font-semibold mt-1">Win: +₹600 (2.0x)</div>
-              <div className="text-[10px] text-rose-400 font-semibold">Loss: -₹300</div>
+              <div className="text-[10px] text-slate-400 font-semibold mt-1">Difficulty: Medium</div>
             </div>
             <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
               <div className="text-[11px] font-bold text-emerald-400 uppercase truncate">Bounce The Ball</div>
               <div className="font-mono text-xs font-bold text-white mt-0.5">Fee: ₹200</div>
-              <div className="text-[10px] text-emerald-400 font-semibold mt-1">Win: +₹300 (1.5x)</div>
-              <div className="text-[10px] text-rose-400 font-semibold">Loss: -₹200</div>
+              <div className="text-[10px] text-slate-400 font-semibold mt-1">Difficulty: Easy</div>
             </div>
             <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
               <div className="text-[11px] font-bold text-purple-400 uppercase truncate">Eat The Cookies</div>
               <div className="font-mono text-xs font-bold text-white mt-0.5">Fee: ₹400</div>
-              <div className="text-[10px] text-emerald-400 font-semibold mt-1">Win: +₹1,000 (2.5x)</div>
-              <div className="text-[10px] text-rose-400 font-semibold">Loss: -₹400</div>
+              <div className="text-[10px] text-slate-400 font-semibold mt-1">Difficulty: Moderately Hard</div>
             </div>
             <div className="bg-slate-950/80 p-3 sm:p-3.5 rounded-2xl border border-slate-800">
               <div className="text-[11px] font-bold text-rose-400 uppercase truncate">Run With The Pen</div>
               <div className="font-mono text-xs font-bold text-white mt-0.5">Fee: ₹600</div>
-              <div className="text-[10px] text-emerald-400 font-semibold mt-1">Win: +₹2,100 (3.5x)</div>
-              <div className="text-[10px] text-rose-400 font-semibold">Loss: -₹600</div>
+              <div className="text-[10px] text-slate-400 font-semibold mt-1">Difficulty: Hard</div>
             </div>
           </div>
         </div>
@@ -384,10 +427,10 @@ export default function ParticipantDashboard({ gameSettings }) {
               <span>0% Return</span>
             </div>
             <div className="font-mono font-bold text-xl text-white">
-              ₹{(portfolio?.cash ?? currentCapital).toLocaleString('en-IN')}
+              ₹{Math.max(0, portfolio?.cash ?? currentCapital).toLocaleString('en-IN')}
             </div>
             <div className="text-[11px] text-slate-400 mt-2">
-              Min ₹{gameSettings?.minimumCash || 2000} Required
+              {currentRound === 1 ? `Min ₹${gameSettings?.minimumCash || 2000} Required` : 'Liquid Funds for Tasks'}
             </div>
           </div>
 
@@ -400,10 +443,10 @@ export default function ParticipantDashboard({ gameSettings }) {
               <span className="text-emerald-400 font-bold">+{gameSettings?.bankReturnPercent || 5}%</span>
             </div>
             <div className="font-mono font-bold text-xl text-white">
-              ₹{(portfolio?.bank ?? 0).toLocaleString('en-IN')}
+              ₹{Math.max(0, portfolio?.bank ?? 0).toLocaleString('en-IN')}
             </div>
             <div className="text-[11px] text-slate-400 mt-2">
-              Yield: ₹{Math.round((portfolio?.bank ?? 0) * (1 + (gameSettings?.bankReturnPercent || 5) / 100)).toLocaleString('en-IN')}
+              Yield: ₹{Math.round(Math.max(0, portfolio?.bank ?? 0) * (1 + (gameSettings?.bankReturnPercent || 5) / 100)).toLocaleString('en-IN')}
             </div>
           </div>
 
@@ -418,10 +461,10 @@ export default function ParticipantDashboard({ gameSettings }) {
               </span>
             </div>
             <div className="font-mono font-bold text-xl text-white">
-              ₹{(portfolio?.stocks ?? 0).toLocaleString('en-IN')}
+              ₹{Math.max(0, portfolio?.stocks ?? 0).toLocaleString('en-IN')}
             </div>
             <div className="text-[11px] text-slate-400 mt-2">
-              Market Val: ₹{Math.round((portfolio?.stocks ?? 0) * (1 + (portfolio?.stockReturnPercent ?? 0) / 100)).toLocaleString('en-IN')}
+              Market Val: ₹{Math.round(Math.max(0, portfolio?.stocks ?? 0) * (1 + (portfolio?.stockReturnPercent ?? 0) / 100)).toLocaleString('en-IN')}
             </div>
           </div>
 
@@ -434,10 +477,10 @@ export default function ParticipantDashboard({ gameSettings }) {
               <span className="text-emerald-400 font-bold">+{gameSettings?.goldReturnPercent || 8}%</span>
             </div>
             <div className="font-mono font-bold text-xl text-white">
-              ₹{(portfolio?.gold ?? 0).toLocaleString('en-IN')}
+              ₹{Math.max(0, portfolio?.gold ?? 0).toLocaleString('en-IN')}
             </div>
             <div className="text-[11px] text-slate-400 mt-2">
-              Commodity Val: ₹{Math.round((portfolio?.gold ?? 0) * (1 + (gameSettings?.goldReturnPercent || 8) / 100)).toLocaleString('en-IN')}
+              Commodity Val: ₹{Math.round(Math.max(0, portfolio?.gold ?? 0) * (1 + (gameSettings?.goldReturnPercent || 8) / 100)).toLocaleString('en-IN')}
             </div>
           </div>
         </div>

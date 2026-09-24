@@ -8,7 +8,52 @@ export const getUserRole = () => localStorage.getItem('role');
 export const setUserRole = (role) => localStorage.setItem('role', role);
 export const removeUserRole = () => localStorage.removeItem('role');
 
-async function request(endpoint, options = {}) {
+export const getStoredUser = () => {
+  try {
+    const val = localStorage.getItem('capital_rush_user');
+    return val ? JSON.parse(val) : null;
+  } catch (e) {
+    return null;
+  }
+};
+export const setStoredUser = (user) => {
+  try {
+    localStorage.setItem('capital_rush_user', JSON.stringify(user));
+  } catch (e) {}
+};
+export const removeStoredUser = () => localStorage.removeItem('capital_rush_user');
+
+export const getStoredTeam = () => {
+  try {
+    const val = localStorage.getItem('capital_rush_team');
+    return val ? JSON.parse(val) : null;
+  } catch (e) {
+    return null;
+  }
+};
+export const setStoredTeam = (team) => {
+  try {
+    if (team) localStorage.setItem('capital_rush_team', JSON.stringify(team));
+  } catch (e) {}
+};
+export const removeStoredTeam = () => localStorage.removeItem('capital_rush_team');
+
+export const getStoredPortfolio = () => {
+  try {
+    const val = localStorage.getItem('capital_rush_portfolio');
+    return val ? JSON.parse(val) : null;
+  } catch (e) {
+    return null;
+  }
+};
+export const setStoredPortfolio = (portfolio) => {
+  try {
+    if (portfolio) localStorage.setItem('capital_rush_portfolio', JSON.stringify(portfolio));
+  } catch (e) {}
+};
+export const removeStoredPortfolio = () => localStorage.removeItem('capital_rush_portfolio');
+
+async function request(endpoint, options = {}, retries = 2, delayMs = 600) {
   const token = getAuthToken();
   const headers = {
     'Content-Type': 'application/json',
@@ -21,17 +66,51 @@ async function request(endpoint, options = {}) {
     headers
   };
 
-  try {
-    const res = await fetch(`${API_BASE}${endpoint}`, config);
-    const data = await res.json();
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, config);
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        data = {};
+      }
 
-    if (!res.ok) {
-      throw new Error(data.message || `Request failed with status ${res.status}`);
+      if (!res.ok) {
+        const error = new Error(data.message || `Request failed with status ${res.status}`);
+        error.status = res.status;
+        error.data = data;
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      // If error has a response status < 500 (e.g. 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found),
+      // don't retry client-side errors
+      if (error.status && error.status < 500) {
+        throw error;
+      }
+
+      // If retries remain and it's a network drop / timeout or 5xx server error, wait and retry
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)));
+        continue;
+      }
+
+      // Format network disconnects cleanly
+      if (
+        error.name === 'TypeError' ||
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('Network request failed')
+      ) {
+        const netErr = new Error('Network connection issue. Reconnecting...');
+        netErr.isNetworkError = true;
+        throw netErr;
+      }
+
+      throw error;
     }
-
-    return data;
-  } catch (error) {
-    throw error;
   }
 }
 

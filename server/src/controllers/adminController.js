@@ -71,7 +71,11 @@ const getAllTeams = async (req, res) => {
     const teamsWithDetails = await Promise.all(
       teams.map(async (team) => {
         const memberCount = await User.countDocuments({ team: team._id, role: 'PARTICIPANT' });
-        const portfolio = await Portfolio.findOne({ team: team._id }).select('cash bank stocks gold stockReturnPercent totalValuation');
+        let portfolio = await Portfolio.findOne({ team: team._id });
+        if (portfolio && portfolio.cash < 0) {
+          portfolio.rebalanceNegativeCash();
+          await portfolio.save();
+        }
         return {
           id: team._id,
           teamId: team.teamId,

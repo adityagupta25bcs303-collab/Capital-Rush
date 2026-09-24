@@ -5,6 +5,7 @@ import { getRound2Tasks, enterRound2Task } from '../services/api';
 export default function Round2TasksModal({ team, isOpen, onClose, onUpdated }) {
   const [tasks, setTasks] = useState([]);
   const [teamTasks, setTeamTasks] = useState([]);
+  const [activeTask, setActiveTask] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState('');
@@ -16,6 +17,7 @@ export default function Round2TasksModal({ team, isOpen, onClose, onUpdated }) {
       if (res.success) {
         setTasks(res.tasks || []);
         setTeamTasks(res.teamTasks || []);
+        setActiveTask(res.activeTask || null);
       }
     } catch (err) {
       console.error('Error loading round 2 tasks:', err);
@@ -86,7 +88,7 @@ export default function Round2TasksModal({ team, isOpen, onClose, onUpdated }) {
           <h3 className="font-display font-bold text-lg sm:text-xl text-white">Round 2: Arena Task Roster</h3>
         </div>
         <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-          Compete in 4 high-stakes challenges. Entry fee depends on game risk & difficulty level. Payouts rewarded upon admin confirmation!
+          Compete in 4 challenges. You can replay any task, but you must alternate by playing a different challenge before replaying the same one!
         </p>
 
         {error && (
@@ -106,28 +108,34 @@ export default function Round2TasksModal({ team, isOpen, onClose, onUpdated }) {
         {/* Task Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-6">
           {tasks.map((task) => {
-            const myEntry = teamTasks.find((t) => t.taskKey === task.key);
             const canAfford = currentCapital - task.entryFee >= 1000;
+            const isCurrentlyEntered = task.isCurrentlyEntered;
+            const isCooldown = task.isCooldown;
+            const hasOtherActiveTask = activeTask && !isCurrentlyEntered;
 
             return (
               <div
                 key={task.key}
                 className={`p-4 rounded-2xl border transition ${
-                  myEntry?.status === 'WON'
-                    ? 'bg-emerald-950/20 border-emerald-600/40'
-                    : myEntry?.status === 'LOST'
-                    ? 'bg-rose-950/20 border-rose-800/40'
-                    : myEntry?.status === 'ENTERED'
-                    ? 'bg-amber-950/20 border-amber-600/40'
-                    : 'bg-slate-950 border-slate-800'
+                  isCurrentlyEntered
+                    ? 'bg-amber-950/20 border-amber-500/50 shadow-lg shadow-amber-500/5'
+                    : isCooldown
+                    ? 'bg-slate-950/60 border-slate-800/80'
+                    : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
-                    <h4 className="font-display font-bold text-base text-white">{task.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-display font-bold text-base text-white">{task.name}</h4>
+                      {task.timesPlayed > 0 && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-slate-800 text-slate-300 rounded border border-slate-700">
+                          {task.timesPlayed}x
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-1">
                       {getDifficultyBadge(task.difficulty)}
-                      <span className="text-[10px] font-semibold text-slate-400">Risk: {task.risk}</span>
                     </div>
                   </div>
                   <div className="text-right">
@@ -142,51 +150,38 @@ export default function Round2TasksModal({ team, isOpen, onClose, onUpdated }) {
                   {task.description}
                 </p>
 
-                {/* Status or Join Button */}
-                <div className="pt-2.5 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="text-[11px] space-y-0.5">
-                    <div>
-                      <span className="text-slate-400">Win Reward: </span>
-                      <strong className="text-emerald-400 font-mono">
-                        +{task.defaultMultiplier}x (+₹{Math.round(task.entryFee * task.defaultMultiplier)})
-                      </strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Loss Penalty: </span>
-                      <strong className="text-rose-400 font-mono">
-                        -₹{task.defaultLossPenalty || task.entryFee}
-                      </strong>
-                    </div>
+                {/* Status or Join / Replay Button */}
+                <div className="pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                  <div className="text-xs text-slate-400">
+                    Difficulty: <span className="text-slate-200 font-semibold">{task.difficulty}</span>
                   </div>
 
-                  {myEntry ? (
-                    <div className="text-left sm:text-right shrink-0">
-                      {myEntry.status === 'WON' && (
-                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 font-bold text-xs rounded-lg border border-emerald-500/30 inline-block">
-                          🏆 WON (+₹{myEntry.rewardAmount})
-                        </span>
-                      )}
-                      {myEntry.status === 'LOST' && (
-                        <span className="px-2 py-1 bg-rose-500/20 text-rose-300 font-bold text-xs rounded-lg border border-rose-500/30 inline-block">
-                          ✕ LOST (-₹{myEntry.lossAmount || task.defaultLossPenalty || task.entryFee})
-                        </span>
-                      )}
-                      {myEntry.status === 'ENTERED' && (
-                        <span className="px-2 py-1 bg-amber-500/20 text-amber-300 font-bold text-xs rounded-lg border border-amber-500/30 animate-pulse inline-block">
-                          ⏳ In Arena
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleJoinTask(task.key)}
-                      disabled={isEliminated || !canAfford || actionLoading === task.key}
-                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-bold text-xs rounded-xl shadow transition active:scale-95 flex items-center gap-1"
-                    >
-                      {actionLoading === task.key ? 'Entering...' : 'Join Task'}
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <div className="shrink-0">
+                    {isCurrentlyEntered ? (
+                      <span className="px-2.5 py-1 bg-amber-500/20 text-amber-300 font-bold text-xs rounded-xl border border-amber-500/40 animate-pulse flex items-center gap-1">
+                        ⏳ In Arena
+                      </span>
+                    ) : isCooldown ? (
+                      <span className="px-2 py-1 bg-slate-800/80 text-slate-400 font-semibold text-[11px] rounded-xl border border-slate-700 flex items-center gap-1" title="Under tournament rules, you must play a different task before replaying this one.">
+                        🔒 Play another first
+                      </span>
+                    ) : hasOtherActiveTask ? (
+                      <span className="text-[11px] text-slate-500">
+                        Finish arena task first
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleJoinTask(task.key)}
+                        disabled={isEliminated || !canAfford || actionLoading === task.key}
+                        className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-bold text-xs rounded-xl shadow transition active:scale-95 flex items-center gap-1"
+                      >
+                        {actionLoading === task.key
+                          ? 'Entering...'
+                          : (task.timesPlayed > 0 ? 'Replay Task' : 'Join Task')}
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

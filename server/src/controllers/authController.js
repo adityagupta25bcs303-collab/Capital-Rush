@@ -19,7 +19,7 @@ const generateToken = (user) => {
       adminId: user.adminId
     },
     secret,
-    { expiresIn: '24h' }
+    { expiresIn: '30d' }
   );
 };
 
@@ -54,6 +54,19 @@ const loginParticipant = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No team assigned to this account. Please contact an administrator.' });
     }
 
+    // Fetch latest portfolio for this team
+    let portfolio = await Portfolio.findOne({ team: user.team._id });
+    if (!portfolio) {
+      portfolio = await Portfolio.create({
+        team: user.team._id,
+        cash: user.team.currentCapital,
+        totalValuation: user.team.currentCapital
+      });
+    } else if (portfolio.cash < 0) {
+      portfolio.rebalanceNegativeCash();
+      await portfolio.save();
+    }
+
     const token = generateToken(user);
 
     return res.status(200).json({
@@ -70,7 +83,16 @@ const loginParticipant = async (req, res) => {
           teamId: user.team.teamId,
           name: user.team.name,
           currentCapital: user.team.currentCapital,
-          startingCapital: user.team.startingCapital
+          startingCapital: user.team.startingCapital,
+          status: user.team.status
+        },
+        portfolio: {
+          cash: portfolio.cash,
+          bank: portfolio.bank,
+          stocks: portfolio.stocks,
+          gold: portfolio.gold,
+          stockReturnPercent: portfolio.stockReturnPercent,
+          totalValuation: portfolio.totalValuation
         }
       }
     });
@@ -139,6 +161,16 @@ const loginAdmin = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     const user = req.user;
+    let portfolio = null;
+    if (user.team) {
+      const teamId = user.team._id || user.team;
+      portfolio = await Portfolio.findOne({ team: teamId });
+      if (portfolio && portfolio.cash < 0) {
+        portfolio.rebalanceNegativeCash();
+        await portfolio.save();
+      }
+    }
+
     return res.status(200).json({
       success: true,
       user: {
@@ -147,7 +179,15 @@ const getMe = async (req, res) => {
         email: user.email,
         adminId: user.adminId,
         role: user.role,
-        team: user.team
+        team: user.team,
+        portfolio: portfolio ? {
+          cash: portfolio.cash,
+          bank: portfolio.bank,
+          stocks: portfolio.stocks,
+          gold: portfolio.gold,
+          stockReturnPercent: portfolio.stockReturnPercent,
+          totalValuation: portfolio.totalValuation
+        } : null
       }
     });
   } catch (error) {
@@ -232,6 +272,7 @@ const registerParticipant = async (req, res) => {
       status: 'ACTIVE'
     });
 
+    const portfolio = await Portfolio.findOne({ team: teamDoc._id });
     const token = generateToken(user);
 
     return res.status(201).json({
@@ -248,8 +289,17 @@ const registerParticipant = async (req, res) => {
           teamId: teamDoc.teamId,
           name: teamDoc.name,
           currentCapital: teamDoc.currentCapital,
-          startingCapital: teamDoc.startingCapital
-        }
+          startingCapital: teamDoc.startingCapital,
+          status: teamDoc.status
+        },
+        portfolio: portfolio ? {
+          cash: portfolio.cash,
+          bank: portfolio.bank,
+          stocks: portfolio.stocks,
+          gold: portfolio.gold,
+          stockReturnPercent: portfolio.stockReturnPercent,
+          totalValuation: portfolio.totalValuation
+        } : null
       }
     });
   } catch (error) {

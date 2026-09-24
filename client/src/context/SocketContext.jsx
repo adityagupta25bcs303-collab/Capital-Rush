@@ -15,8 +15,11 @@ export const SocketProvider = ({ children }) => {
     // Connect to current origin in unified mode or localhost in dev
     const socketInstance = io('/', {
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000
     });
 
     socketInstance.on('connect', () => {
@@ -24,9 +27,17 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(true);
     });
 
-    socketInstance.on('disconnect', () => {
-      console.log('[Socket] Disconnected.');
+    socketInstance.on('disconnect', (reason) => {
+      console.log('[Socket] Disconnected:', reason);
       setIsConnected(false);
+      if (reason === 'io server disconnect') {
+        // Reconnect if disconnected by server
+        socketInstance.connect();
+      }
+    });
+
+    socketInstance.on('connect_error', (err) => {
+      console.warn('[Socket] Connection error:', err.message);
     });
 
     socketInstance.on('balance_updated', (data) => {
@@ -46,9 +57,22 @@ export const SocketProvider = ({ children }) => {
       setLastGameStatusUpdate(data);
     });
 
+    // Device wake-up & network resume listener
+    const handleWakeup = () => {
+      if (document.visibilityState === 'visible' && !socketInstance.connected) {
+        console.log('[Socket] Device wake-up detected, reconnecting socket...');
+        socketInstance.connect();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleWakeup);
+    window.addEventListener('online', handleWakeup);
+
     setSocket(socketInstance);
 
     return () => {
+      document.removeEventListener('visibilitychange', handleWakeup);
+      window.removeEventListener('online', handleWakeup);
       socketInstance.disconnect();
     };
   }, []);

@@ -29,6 +29,9 @@ const getMyTeam = async (req, res) => {
         cash: team.currentCapital,
         totalValuation: team.currentCapital
       });
+    } else if (portfolio.cash < 0) {
+      portfolio.rebalanceNegativeCash();
+      await portfolio.save();
     }
 
     const members = await User.find({ team: team._id, role: 'PARTICIPANT' }).select('name email status');
@@ -69,6 +72,9 @@ const getTeamByTeamId = async (req, res) => {
         cash: team.currentCapital,
         totalValuation: team.currentCapital
       });
+    } else if (portfolio.cash < 0) {
+      portfolio.rebalanceNegativeCash();
+      await portfolio.save();
     }
 
     const members = await User.find({ team: team._id, role: 'PARTICIPANT' }).select('name email status');

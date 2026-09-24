@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
 
 let mongod = null;
 
@@ -19,14 +21,28 @@ const connectDB = async () => {
       }
     }
 
-    // Fallback: embedded MongoMemoryServer
-    console.log('[DB] Initializing Embedded MongoDB Server for zero-setup execution...');
+    // Permanent on-disk embedded MongoDB with WiredTiger storage engine
+    const dbDir = path.resolve(__dirname, '..', '..', 'data', 'db');
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+
+    console.log(`[DB] Initializing Persistent MongoDB Storage Engine at ${dbDir}...`);
     const { MongoMemoryServer } = require('mongodb-memory-server');
-    mongod = await MongoMemoryServer.create();
-    const uri = mongod.getUri();
-    
-    const conn = await mongoose.connect(uri);
-    console.log(`[DB] Connected to Embedded MongoDB: ${conn.connection.host}`);
+    mongod = await MongoMemoryServer.create({
+      instance: {
+        dbPath: dbDir,
+        storageEngine: 'wiredTiger',
+        dbName: 'capital_rush'
+      }
+    });
+
+    const uri = mongod.getUri('capital_rush');
+    const conn = await mongoose.connect(uri, {
+      writeConcern: { w: 1, j: true },
+      autoIndex: true
+    });
+    console.log(`[DB] Connected to Persistent MongoDB: ${conn.connection.host} (Database: capital_rush, Journal: on-disk)`);
   } catch (error) {
     console.error(`[DB] Error connecting to database:`, error);
     process.exit(1);
@@ -35,6 +51,11 @@ const connectDB = async () => {
 
 const disconnectDB = async () => {
   try {
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      try {
+        await mongoose.connection.db.admin().command({ fsync: 1 });
+      } catch (e) {}
+    }
     await mongoose.disconnect();
     if (mongod) {
       await mongod.stop();
@@ -43,5 +64,16 @@ const disconnectDB = async () => {
     console.error('[DB] Error during disconnection:', err);
   }
 };
+
+// Graceful process exit flushes
+process.on('SIGINT', async () => {
+  await disconnectDB();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await disconnectDB();
+  process.exit(0);
+});
 
 module.exports = { connectDB, disconnectDB };

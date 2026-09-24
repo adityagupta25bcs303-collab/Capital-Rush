@@ -101,7 +101,7 @@ export default function LandingPage({ gameSettings }) {
               ARENA TASK CHALLENGES
             </h3>
             <p className="text-sm text-slate-400 leading-relaxed mb-4">
-              4 high-energy challenges: Who Am I (₹300), Bounce The Ball (₹200), Eat The Cookies (₹400), and Run With The Pen (₹600). Entry fees deducted with risk-adjusted payout rewards!
+              4 high-energy challenges: Who Am I (₹300), Bounce The Ball (₹200), Eat The Cookies (₹400), and Run With The Pen (₹600). Entry fee based on challenge difficulty!
             </p>
             <div className="text-xs font-semibold text-slate-500 flex items-center gap-1">
               <span>Sub-second QR Scoring & Payouts</span>
