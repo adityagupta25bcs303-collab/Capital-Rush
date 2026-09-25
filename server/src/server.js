@@ -20,8 +20,9 @@ const startServer = async () => {
     const server = http.createServer(app);
     const io = new Server(server, {
       cors: {
-        origin: '*',
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+        origin: 'https://capital-rush-delta.vercel.app',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+        credentials: true
       }
     });
 

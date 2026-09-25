@@ -14,7 +14,7 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: '*',
+  origin: 'https://capital-rush-delta.vercel.app',
   credentials: true
 }));
 app.use(express.json());
