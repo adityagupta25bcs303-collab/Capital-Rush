@@ -12,8 +12,10 @@ export const SocketProvider = ({ children }) => {
   const [lastGameStatusUpdate, setLastGameStatusUpdate] = useState(null);
 
   useEffect(() => {
-    // Connect to current origin in unified mode or localhost in dev
-    const socketInstance = io('/', {
+    const backendUrl = import.meta.env.VITE_API_URL || 'https://capital-rush-backend.onrender.com';
+
+    const socketInstance = io(backendUrl, {
+      withCredentials: true,
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,

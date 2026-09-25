@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = `${import.meta.env.VITE_API_URL || 'https://capital-rush-backend.onrender.com'}/api`;
 
 export const getAuthToken = () => localStorage.getItem('token');
 export const setAuthToken = (token) => localStorage.setItem('token', token);
@@ -63,6 +63,7 @@ async function request(endpoint, options = {}, retries = 2, delayMs = 600) {
 
   const config = {
     ...options,
+    credentials: options.credentials ?? 'include',
     headers
   };
 

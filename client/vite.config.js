@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const backendTarget = process.env.VITE_API_URL || 'https://capital-rush-backend.onrender.com';
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -8,11 +10,11 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: backendTarget,
         changeOrigin: true
       },
       '/socket.io': {
-        target: 'http://localhost:5000',
+        target: backendTarget,
         ws: true
       }
     }
